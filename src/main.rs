@@ -34,12 +34,10 @@ fn main() {
     let vertex_shader_src = r#"
     #version 140
     in vec2 position;
-    uniform float t;
+    uniform mat4 matrix;
 
     void main() {
-        vec2 pos = position;
-        pos.x += t;
-        gl_Position = vec4(pos, 0.0, 1.0);
+        gl_Position = matrix * vec4(position, 0.0, 1.0);
     }
     "#;
 
@@ -47,9 +45,8 @@ fn main() {
     // dafluffy potato covers some theory of this.
 
     let fragment_shader_src = r#"
-        #version 140
-
-        out vec4 color;
+    #version 140
+    out vec4 color;
 
     void main() {
         color = vec4(1.0, 0.0, 0.0, 1.0);
@@ -61,6 +58,7 @@ fn main() {
             .expect("this to read the source");
 
     let mut t: f32 = -0.5;
+    
 
     events_loop.run(move |ev, _, control_flow| {
         // this is the event loop
@@ -84,6 +82,15 @@ fn main() {
             t = -0.5;
         }
 
+        let uniforms = glium::uniform! {
+            matrix: [
+                [t.cos(), t.sin(), 0.0, 0.0],
+                [-t.sin(), t.cos(), 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0f32]
+
+            ]
+        };
         // Drawing to the Screen
         let mut target = display.draw();
         target.clear_color(0., 0., 1., 1.);
@@ -92,7 +99,7 @@ fn main() {
                 &vertex_buffer,
                 &indices,
                 &program,
-                &glium::uniform! {t: t},
+                &uniforms,
                 &Default::default(),
             )
             .expect("to draw triangle");
