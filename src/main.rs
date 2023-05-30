@@ -1,4 +1,6 @@
 #![allow(unused_variables)]
+use std::f32::consts::PI;
+
 use glium::{self, glutin, implement_vertex, Surface};
 
 #[derive(Copy, Clone)]
@@ -37,9 +39,11 @@ fn main() {
     uniform mat4 matrix;
 
     void main() {
-        gl_Position = matrix * vec4(position, 0.0, 1.0);
+        gl_Position = matrix * vec4(position, 0.0, 1.0); 
     }
     "#;
+    // [x, y, z, 1.0] 
+    // This 1.0 constant is useful for mapping an addition to a constant.
 
     // void main is called for each vertex
     // dafluffy potato covers some theory of this.
@@ -73,11 +77,11 @@ fn main() {
             _ => (),
         }
         let next_frame_time =
-            std::time::Instant::now() + std::time::Duration::from_nanos(16_666_667);
+            std::time::Instant::now() + std::time::Duration::from_millis(100);
         *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
         // Game updates
-        t += 0.0002;
+        t += 0.002;
         if t > 0.5 {
             t = -0.5;
         }
@@ -91,6 +95,17 @@ fn main() {
 
             ]
         };
+
+        // let uniforms = glium::uniform! {
+        //     matrix: [
+        //         [1.0, 0.0, 0.0, 0.0],
+        //         [0.0, 1.0, 0.0, 0.0],
+        //         [0.0, 0.0, 1.0, 0.0],
+        //         [ t , 0.0, 0.0, 1.0f32]  *   [x, y, z, 1.0] = [x+t, y, z, 1.0]
+
+        //     ]
+        // };
+
         // Drawing to the Screen
         let mut target = display.draw();
         target.clear_color(0., 0., 1., 1.);
