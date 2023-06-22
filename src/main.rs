@@ -1,14 +1,16 @@
 #![allow(unused_variables)]
-use std::f32::consts::PI;
-
 use glium::{self, glutin, implement_vertex, Surface};
+
+#[path ="assets/models/teapot.rs"]
+mod teapot;
 
 #[derive(Copy, Clone)]
 struct Vertex {
     position: [f32; 2],
+    tex_coords: [f32; 2],
 }
 
-implement_vertex!(Vertex, position);
+implement_vertex!(Vertex, position, tex_coords);
 
 fn main() {
     println!("Hello, world!");
@@ -19,29 +21,39 @@ fn main() {
 
     let vertex1 = Vertex {
         position: [-0.5, -0.5],
+        tex_coords: [0.0, 0.0],
     };
     let vertex2 = Vertex {
         position: [0.0, 0.5],
+        tex_coords: [0.0, 1.0],
     };
     let vertex3 = Vertex {
-        position: [0.4, -0.25],
+        position: [0.5, -0.25],
+        tex_coords: [1.0, 0.0],
     };
     let shape = vec![vertex1, vertex2, vertex3];
 
     // (Theory)[https://glium.github.io/glium/book/tuto-02-triangle.html#program]
-    let vertex_buffer =
-        glium::VertexBuffer::new(&display, &shape).expect("shape to be put into memory");
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
+    // let vertex_buffer =
+    //    glium::VertexBuffer::new(&display, &shape).expect("shape to be put into memory");
+    // let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
+
+    let positions = glium::VertexBuffer::new(&display, &teapot::VERTICES).expect("shape to be put into memory");
+    let normals = glium::VertexBuffer::new(&display, &teapot::VERTICES).expect("shape to be put into memory");
+    let indices = glium::IndexBuffer::new(&display, glium::index::PrimitiveType::TrianglesList, &teapot::INDICES).expect("This to be read into memory");
 
     let vertex_shader_src = r#"
     #version 140
-    in vec2 position;
+    in vec3 position;
+    in vec3 normal;
+
     uniform mat4 matrix;
 
     void main() {
-        gl_Position = matrix * vec4(position, 0.0, 1.0); 
+        gl_Position = matrix * vec4(position, 1.0); 
     }
     "#;
+    // ideas of using the 4th coordinate as scaling. look into the complex shape part of it.
     // [x, y, z, 1.0] 
     // This 1.0 constant is useful for mapping an addition to a constant.
 
@@ -51,6 +63,7 @@ fn main() {
     let fragment_shader_src = r#"
     #version 140
     out vec4 color;
+
 
     void main() {
         color = vec4(1.0, 0.0, 0.0, 1.0);
@@ -62,6 +75,12 @@ fn main() {
             .expect("this to read the source");
 
     let mut t: f32 = -0.5;
+
+    use std::io::Cursor;
+    let image = image::load(Cursor::new(&include_bytes!("assets/textures/opengl.png")),image::ImageFormat::Png).expect("couldn't open image file").to_rgba8();
+    let image_dimenions = image.dimensions();
+    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimenions);
+    let texture = glium::texture::SrgbTexture2d::new(&display, image).expect(" to form a texture with it");
     
 
     events_loop.run(move |ev, _, control_flow| {
@@ -81,19 +100,14 @@ fn main() {
         *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
         // Game updates
-        t += 0.002;
-        if t > 0.5 {
-            t = -0.5;
-        }
 
         let uniforms = glium::uniform! {
             matrix: [
-                [t.cos(), t.sin(), 0.0, 0.0],
-                [-t.sin(), t.cos(), 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
                 [0.0, 0.0, 1.0, 0.0],
                 [0.0, 0.0, 0.0, 1.0f32]
-
-            ]
+            ],
         };
 
         // let uniforms = glium::uniform! {
@@ -111,13 +125,14 @@ fn main() {
         target.clear_color(0., 0., 1., 1.);
         target
             .draw(
-                &vertex_buffer,
+                (&positions, &normals),
                 &indices,
                 &program,
                 &uniforms,
                 &Default::default(),
             )
-            .expect("to draw triangle");
+            .expect("to draw complex shape");
         target.finish().expect("to be drawn on a screen");
     });
 }
+
